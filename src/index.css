@@ -1,0 +1,120 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  body {
+    @apply bg-gradient-to-br from-sage-50 via-white to-olive-50 min-h-screen text-gray-800 font-sans antialiased;
+  }
+
+  * {
+    @apply border-sage-200;
+  }
+}
+
+@layer components {
+  .card {
+    @apply bg-white rounded-xl shadow-card border border-sage-100 transition-all duration-300;
+  }
+
+  .card:hover {
+    @apply shadow-card-hover;
+  }
+
+  .btn-primary {
+    @apply bg-sage-600 hover:bg-sage-700 text-white font-medium px-4 py-2 rounded-lg transition-all duration-200 shadow-sm hover:shadow-md active:scale-95;
+  }
+
+  .btn-secondary {
+    @apply bg-white hover:bg-sage-50 text-sage-700 font-medium px-4 py-2 rounded-lg border border-sage-200 transition-all duration-200;
+  }
+
+  .btn-icon {
+    @apply p-2 rounded-lg bg-sage-100 hover:bg-sage-200 text-sage-700 transition-all duration-200 active:scale-95;
+  }
+
+  .input-field {
+    @apply w-full px-4 py-2.5 rounded-lg border border-sage-200 bg-white focus:outline-none focus:ring-2 focus:ring-sage-400 focus:border-transparent transition-all duration-200;
+  }
+
+  .label {
+    @apply text-sm font-medium text-gray-700 mb-1 block;
+  }
+
+  .tab-active {
+    @apply bg-white text-sage-700 shadow-sm;
+  }
+
+  .tab-inactive {
+    @apply text-gray-500 hover:text-gray-700 hover:bg-sage-50;
+  }
+
+  .status-badge {
+    @apply text-xs font-medium px-2.5 py-1 rounded-full inline-flex items-center gap-1;
+  }
+
+  .status-available {
+    @apply bg-mint-100 text-mint-700;
+  }
+
+  .status-sold-out {
+    @apply bg-red-100 text-red-700;
+  }
+
+  .status-by-order {
+    @apply bg-amber-100 text-amber-700;
+  }
+
+  .status-pending {
+    @apply bg-orange-100 text-orange-700;
+  }
+
+  .status-anticipo {
+    @apply bg-blue-100 text-blue-700;
+  }
+
+  .status-settled {
+    @apply bg-green-100 text-green-700;
+  }
+
+  .progress-bar {
+    @apply h-2 rounded-full bg-sage-100 overflow-hidden;
+  }
+
+  .progress-fill {
+    @apply h-full rounded-full bg-gradient-to-r from-sage-400 to-mint-500 transition-all duration-500;
+  }
+
+  .metric-card {
+    @apply card p-6 relative overflow-hidden;
+  }
+
+  .metric-value {
+    @apply text-3xl font-bold text-sage-800;
+  }
+
+  .metric-label {
+    @apply text-sm text-gray-500 mt-1;
+  }
+
+  .metric-icon {
+    @apply absolute top-6 right-6 w-12 h-12 rounded-xl flex items-center justify-center;
+  }
+}
+
+@layer utilities {
+  .scrollbar-hide {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+
+  .scrollbar-hide::-webkit-scrollbar {
+    display: none;
+  }
+
+  .text-gradient {
+    @apply bg-gradient-to-r from-sage-600 to-mint-600 bg-clip-text text-transparent;
+  }
+}
