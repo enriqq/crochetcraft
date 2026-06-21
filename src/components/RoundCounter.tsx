@@ -109,7 +109,18 @@ function RoundCounter() {
     if (!counter) return;
 
     const newStitchValue = Math.max(0, (counter[stitchType] || 0) + delta);
-    const newTotal = Math.max(0, (counter.total_stitches || 0) + delta);
+    let newTotal = 0; 
+    if (stitchType === 'aum_count' && delta > 0) {
+      newTotal = Math.max(0, (counter.total_stitches || 0) + delta + 1);
+    }
+    else if (stitchType === 'aum_count' && delta < 0) {
+      newTotal = Math.max(0, (counter.total_stitches || 0) + delta - 1);
+    }
+    else {
+      newTotal = Math.max(0, (counter.total_stitches || 0) + delta);
+    }
+    
+    
 
     const updates = {
       [stitchType]: newStitchValue,
@@ -365,7 +376,7 @@ function RoundCounter() {
                     <div className="flex items-center justify-between mb-4">
                       <h4 className="font-semibold text-gray-700 flex items-center gap-2">
                         <Layers className="w-5 h-5" />
-                        Contador de Puntos
+                        Contador de puntos
                       </h4>
                       <div className="flex items-center gap-2">
                         <span className="text-sm text-gray-500">
@@ -484,7 +495,7 @@ function RoundCounter() {
                       className="w-full py-3 px-4 border-2 border-dashed border-gray-300 rounded-xl text-gray-500 hover:border-sage-400 hover:text-sage-600 hover:bg-sage-50 transition-all flex items-center justify-center gap-2"
                     >
                       <PlusCircle className="w-5 h-5" />
-                      <span className="font-medium">Agregar Contador Personalizado</span>
+                      <span className="font-medium">Agregar contador personalizado</span>
                     </button>
                   </div>
 
