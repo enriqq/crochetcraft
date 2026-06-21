@@ -14,6 +14,7 @@ import {
   Package,
   Truck,
 } from 'lucide-react';
+import Swal from 'sweetalert2';
 import { storage } from '../lib/storage';
 import type { Order } from '../lib/supabase';
 
@@ -27,6 +28,19 @@ interface KanbanColumn {
   color: string;
   bgColor: string;
 }
+
+const Toast = Swal.mixin({
+  toast: true,
+  position: 'top-end',
+  showConfirmButton: false,
+  timer: 2500,
+  timerProgressBar: true,
+  background: '#f9fafb',
+  iconColor: '#6b8273', // Verde Sage Pastel
+  customClass: {
+    popup: 'rounded-xl shadow-md font-sans border border-sage-100 text-gray-800'
+  }
+});
 
 function Orders() {
   const [orders, setOrders] = useState<Order[]>([]);
@@ -73,9 +87,39 @@ function Orders() {
   };
 
   const deleteOrder = async (id: string) => {
-    if (!confirm('¿Eliminar este pedido?')) return;
+    // Alerta de confirmación estética en lugar del confirm nativo
+    const result = await Swal.fire({
+      title: '¿Eliminar este pedido?',
+      text: 'Esta acción no se puede deshacer y eliminará permanentemente la tarjeta de este cliente.',
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonColor: '#6b8273', // Verde Sage Pastel
+      cancelButtonColor: '#9ca3af',  // Gris neutro
+      confirmButtonText: 'Sí, eliminar',
+      cancelButtonText: 'Cancelar',
+      background: '#f9fafb',
+      customClass: {
+        popup: 'rounded-2xl font-sans',
+      }
+    });
+
+    // Si el usuario cancela o cierra la alerta, nos salimos
+    if (!result.isConfirmed) return;
+
+    // Si confirma, se ejecuta el borrado normal
     await storage.deleteOrder(id);
     setOrders(orders.filter(o => o.id !== id));
+
+    // Feedback visual rápido de éxito (Opcional)
+    Swal.fire({
+      title: '¡Eliminado!',
+      text: 'El pedido ha sido removido de tu tablero.',
+      icon: 'success',
+      confirmButtonColor: '#6b8273',
+      customClass: {
+        popup: 'rounded-2xl',
+      }
+    });
   };
 
   const getDaysLeft = (deliveryDate: string) => {
@@ -268,9 +312,11 @@ function Orders() {
           onSave={async (orderData) => {
             if (editingOrder) {
               await storage.updateOrder(editingOrder.id, orderData);
+              Toast.fire({ icon: 'success', title: 'Pedido actualizado con éxito' });
               loadOrders();
             } else {
               await storage.saveOrder(orderData as Omit<Order, 'id' | 'created_at' | 'updated_at'>);
+              Toast.fire({ icon: 'success', title: 'Nuevo pedido registrado' });
               loadOrders();
             }
             setShowModal(false);

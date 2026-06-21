@@ -11,18 +11,29 @@ import {
   ExternalLink,
   PenTool,
   Check,
-  Square,
-  CheckSquare,
   Ruler,
   Gauge,
   Scissors,
   Info,
   List,
   Hash,
-  ChevronUp,
 } from 'lucide-react';
+import Swal from 'sweetalert2'; 
 import { storage } from '../lib/storage';
-import type { Pattern, PatternSection, PatternRound, Abbreviation, PatternMaterial } from '../lib/supabase';
+import type { Pattern, PatternSection, PatternRound, Abbreviation } from '../lib/supabase';
+
+const Toast = Swal.mixin({
+  toast: true,
+  position: 'top-end',
+  showConfirmButton: false,
+  timer: 2500,
+  timerProgressBar: true,
+  background: '#f9fafb',
+  iconColor: '#6b8273', // Verde Sage Pastel
+  customClass: {
+    popup: 'rounded-xl shadow-md font-sans border border-sage-100 text-gray-800'
+  }
+});
 
 function Patterns() {
   const [patterns, setPatterns] = useState<Pattern[]>([]);
@@ -107,8 +118,23 @@ function Patterns() {
     return Math.round((completed / allRounds.length) * 100);
   };
 
+  // REEMPLAZO 1: Eliminar Patrón con SweetAlert2
   const deletePattern = async (id: string) => {
-    if (!confirm('¿Eliminar este patrón y todas sus secciones y vueltas?')) return;
+    const result = await Swal.fire({
+      title: '¿Eliminar este patrón?',
+      text: 'Esta acción borrará permanentemente el patrón junto con todas sus secciones y vueltas registradas.',
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonColor: '#6b8273', // Verde Sage
+      cancelButtonColor: '#9ca3af',  // Gris neutro
+      confirmButtonText: 'Sí, eliminar',
+      cancelButtonText: 'Cancelar',
+      background: '#f9fafb',
+      customClass: { popup: 'rounded-2xl font-sans' }
+    });
+
+    if (!result.isConfirmed) return;
+
     await storage.deletePattern(id);
     setPatterns(patterns.filter(p => p.id !== id));
     setSections(prev => {
@@ -117,10 +143,33 @@ function Patterns() {
       return updated;
     });
     if (expandedPattern === id) setExpandedPattern(null);
+
+    Swal.fire({
+      title: '¡Eliminado!',
+      text: 'El patrón ha sido borrado correctamente.',
+      icon: 'success',
+      confirmButtonColor: '#6b8273',
+      customClass: { popup: 'rounded-2xl' }
+    });
   };
 
+  // REEMPLAZO 2: Eliminar Sección con SweetAlert2
   const deleteSection = async (sectionId: string, patternId: string) => {
-    if (!confirm('¿Eliminar esta sección y todas sus vueltas?')) return;
+    const result = await Swal.fire({
+      title: '¿Eliminar esta sección?',
+      text: 'Se borrarán de forma permanente todas las vueltas asociadas a esta sección.',
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonColor: '#6b8273',
+      cancelButtonColor: '#9ca3af',
+      confirmButtonText: 'Sí, eliminar',
+      cancelButtonText: 'Cancelar',
+      background: '#f9fafb',
+      customClass: { popup: 'rounded-2xl font-sans' }
+    });
+
+    if (!result.isConfirmed) return;
+
     await storage.deletePatternSection(sectionId);
     setSections(prev => ({
       ...prev,
@@ -133,8 +182,23 @@ function Patterns() {
     });
   };
 
+  // REEMPLAZO 3: Eliminar Vuelta con SweetAlert2
   const deleteRound = async (round: PatternRound) => {
-    if (!confirm('¿Eliminar esta vuelta?')) return;
+    const result = await Swal.fire({
+      title: '¿Eliminar esta vuelta?',
+      text: 'El registro e instrucciones de esta vuelta se perderán.',
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonColor: '#6b8273',
+      cancelButtonColor: '#9ca3af',
+      confirmButtonText: 'Sí, eliminar',
+      cancelButtonText: 'Cancelar',
+      background: '#f9fafb',
+      customClass: { popup: 'rounded-2xl font-sans' }
+    });
+
+    if (!result.isConfirmed) return;
+
     await storage.deletePatternRound(round.id);
     setRounds(prev => ({
       ...prev,
@@ -504,7 +568,7 @@ function Patterns() {
                                       <p className="text-sm">Sin vueltas registradas</p>
                                     </div>
                                   ) : (
-                                    sectionRounds.map((round, idx) => (
+                                    sectionRounds.map((round) => (
                                       <div
                                         key={round.id}
                                         className={`flex items-start gap-3 p-3 rounded-lg transition-all group ${
@@ -611,11 +675,12 @@ function Patterns() {
           onSave={async (patternData) => {
             if (editingPattern) {
               await storage.updatePattern(editingPattern.id, patternData);
+              Toast.fire({ icon: 'success', title: 'Patrón actualizado con éxito' });
               loadPatterns();
             } else {
               const newPattern = await storage.savePattern(patternData as Omit<Pattern, 'id' | 'created_at' | 'updated_at'>);
               setSections(prev => ({ ...prev, [newPattern.id]: [] }));
-              setRounds(prev => prev);
+              Toast.fire({ icon: 'success', title: 'Nuevo patrón creado' });
               loadPatterns();
             }
             setShowPatternModal(false);
@@ -631,6 +696,7 @@ function Patterns() {
           onSave={async (sectionData) => {
             if (editingSection.section) {
               await storage.updatePatternSection(editingSection.section.id, sectionData);
+              Toast.fire({ icon: 'success', title: 'Sección actualizada con éxito' });
             } else {
               const newSection = await storage.savePatternSection({
                 ...sectionData,
@@ -638,6 +704,7 @@ function Patterns() {
                 order: (sections[editingSection.patternId]?.length || 0) + 1,
               } as Omit<PatternSection, 'id' | 'created_at' | 'updated_at'>);
               setRounds(prev => ({ ...prev, [newSection.id]: [] }));
+              Toast.fire({ icon: 'success', title: 'Nueva sección agregada' });
             }
             loadPatterns();
             setShowSectionModal(false);
@@ -655,11 +722,13 @@ function Patterns() {
           onSave={async (roundData) => {
             if (editingRound.round) {
               await storage.updatePatternRound(editingRound.round.id, roundData);
+              Toast.fire({ icon: 'success', title: 'Vuelta actualizada con éxito' });
             } else {
               await storage.savePatternRound({
                 ...roundData,
                 section_id: editingRound.sectionId,
               } as Omit<PatternRound, 'id' | 'created_at' | 'updated_at'>);
+              Toast.fire({ icon: 'success', title: 'Nueva vuelta registrada' });
             }
             loadPatterns();
             setShowRoundModal(false);
@@ -670,7 +739,7 @@ function Patterns() {
   );
 }
 
-// Pattern Modal Component
+// Fichas de Modales internas del componente continúan exactamente iguales...
 interface PatternModalProps {
   pattern: Pattern | null;
   onClose: () => void;
@@ -772,7 +841,6 @@ function PatternModal({ pattern, onClose, onSave }: PatternModalProps) {
         </div>
 
         <form onSubmit={handleSubmit} className="p-6 space-y-6 max-h-[70vh] overflow-y-auto">
-          {/* Basic Info */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div className="sm:col-span-2">
               <label className="label">Título del patrón</label>
@@ -831,7 +899,6 @@ function PatternModal({ pattern, onClose, onSave }: PatternModalProps) {
             </div>
           </div>
 
-          {/* Gauge & Measurements */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
               <label className="label">Muestra (Gauge)</label>
@@ -856,7 +923,6 @@ function PatternModal({ pattern, onClose, onSave }: PatternModalProps) {
             </div>
           </div>
 
-          {/* Description & Notes */}
           <div className="space-y-4">
             <div>
               <label className="label">Descripción</label>
@@ -881,7 +947,6 @@ function PatternModal({ pattern, onClose, onSave }: PatternModalProps) {
             </div>
           </div>
 
-          {/* Materials */}
           <div>
             <label className="label mb-2">Materiales necesarios</label>
             <div className="space-y-2 mb-3">
@@ -935,7 +1000,6 @@ function PatternModal({ pattern, onClose, onSave }: PatternModalProps) {
             </div>
           </div>
 
-          {/* Abbreviations */}
           <div>
             <div className="flex items-center justify-between mb-2">
               <label className="label mb-0">Leyenda de abreviaturas</label>
@@ -988,7 +1052,6 @@ function PatternModal({ pattern, onClose, onSave }: PatternModalProps) {
             )}
           </div>
 
-          {/* Links */}
           <div>
             <label className="label mb-2">Enlaces de apoyo</label>
             <div className="space-y-2 mb-2">
@@ -1030,7 +1093,6 @@ function PatternModal({ pattern, onClose, onSave }: PatternModalProps) {
             </div>
           </div>
 
-          {/* Submit */}
           <div className="flex gap-3 pt-4 sticky bottom-0 bg-white py-4 -mx-6 px-6 border-t border-sage-100">
             <button type="button" onClick={onClose} className="btn-secondary flex-1">
               Cancelar
@@ -1045,7 +1107,6 @@ function PatternModal({ pattern, onClose, onSave }: PatternModalProps) {
   );
 }
 
-// Section Modal Component
 interface SectionModalProps {
   section: PatternSection | null;
   onClose: () => void;
@@ -1113,7 +1174,6 @@ function SectionModal({ section, onClose, onSave }: SectionModalProps) {
   );
 }
 
-// Round Modal Component
 interface RoundModalProps {
   round: PatternRound | null;
   sectionId: string;

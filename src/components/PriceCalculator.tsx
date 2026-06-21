@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect } from "react";
 import {
   Calculator as CalcIcon,
   DollarSign,
@@ -9,26 +9,41 @@ import {
   ChevronDown,
   X,
   Sparkles,
-} from 'lucide-react';
-import { storage } from '../lib/storage';
-import type { Material, Product } from '../lib/supabase';
+} from "lucide-react";
+import { storage } from "../lib/storage";
+import Swal from "sweetalert2";
+import type { Material, Product } from "../lib/supabase";
 
 interface MaterialUsage {
   materialId: string;
   quantity: number;
 }
 
+const Toast = Swal.mixin({
+  toast: true,
+  position: "top-end",
+  showConfirmButton: false,
+  timer: 2500,
+  timerProgressBar: true,
+  background: "#f9fafb",
+  iconColor: "#6b8273", // Verde Sage Pastel
+  customClass: {
+    popup:
+      "rounded-xl shadow-md font-sans border border-sage-100 text-gray-800",
+  },
+});
+
 function PriceCalculator() {
   const [materials, setMaterials] = useState<Material[]>([]);
-  const [productName, setProductName] = useState('');
+  const [productName, setProductName] = useState("");
   const [materialUsages, setMaterialUsages] = useState<MaterialUsage[]>([]);
   const [directMaterialCost, setDirectMaterialCost] = useState(0);
-  const [useMaterialFromInventory, setUseMaterialFromInventory] = useState(true);
+  const [useMaterialFromInventory, setUseMaterialFromInventory] =
+    useState(true);
   const [hours, setHours] = useState(0);
   const [minutes, setMinutes] = useState(0);
   const [hourlyRate, setHourlyRate] = useState(15);
   const [marginPercentage, setMarginPercentage] = useState(20);
-  const [showSavedMessage, setShowSavedMessage] = useState(false);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -46,7 +61,7 @@ function PriceCalculator() {
     if (materials.length > 0) {
       setMaterialUsages([
         ...materialUsages,
-        { materialId: materials[0].id, quantity: 50 }
+        { materialId: materials[0].id, quantity: 50 },
       ]);
     }
   };
@@ -55,9 +70,13 @@ function PriceCalculator() {
     setMaterialUsages(materialUsages.filter((_, i) => i !== index));
   };
 
-  const updateMaterialUsage = (index: number, field: 'materialId' | 'quantity', value: string | number) => {
+  const updateMaterialUsage = (
+    index: number,
+    field: "materialId" | "quantity",
+    value: string | number,
+  ) => {
     const updated = [...materialUsages];
-    if (field === 'materialId') {
+    if (field === "materialId") {
       updated[index].materialId = value as string;
     } else {
       updated[index].quantity = value as number;
@@ -71,15 +90,15 @@ function PriceCalculator() {
     }
 
     return materialUsages.reduce((total, usage) => {
-      const material = materials.find(m => m.id === usage.materialId);
+      const material = materials.find((m) => m.id === usage.materialId);
       if (!material) return total;
 
       const costPerUnit = material.cost / material.quantity;
-      return total + (costPerUnit * usage.quantity);
+      return total + costPerUnit * usage.quantity;
     }, 0);
   };
 
-  const totalHours = hours + (minutes / 60);
+  const totalHours = hours + minutes / 60;
   const materialCost = calculateMaterialCost();
   const laborCost = totalHours * hourlyRate;
   const baseCost = materialCost + laborCost;
@@ -88,18 +107,27 @@ function PriceCalculator() {
 
   const handleSaveToCatalog = async () => {
     if (!productName.trim()) {
-      alert('Por favor ingresa un nombre para el producto');
+      Swal.fire({
+        title: "¡Falta el nombre!",
+        text: "Por favor, ingresa un nombre para el producto antes de guardarlo en el catálogo.",
+        icon: "warning",
+        confirmButtonColor: "#6b8273", // Verde Sage Pastel
+        background: "#f9fafb",
+        customClass: {
+          popup: "rounded-2xl font-sans",
+        },
+      });
       return;
     }
 
-    const productData: Omit<Product, 'id' | 'created_at' | 'updated_at'> = {
+    const productData: Omit<Product, "id" | "created_at" | "updated_at"> = {
       name: productName,
       description: `Calculado con ${totalHours.toFixed(1)}h de trabajo`,
-      category: 'Amigurumi',
+      category: "Amigurumi",
       quantity: 0,
       price: finalPrice,
-      status: 'Bajo pedido',
-      image_url: '',
+      status: "Bajo pedido",
+      image_url: "",
     };
 
     await storage.saveProduct(productData);
@@ -114,9 +142,11 @@ function PriceCalculator() {
       saved_to_inventory: true,
     });
 
-    setShowSavedMessage(true);
-    setTimeout(() => setShowSavedMessage(false), 3000);
-    setProductName('');
+    Toast.fire({
+      icon: "success",
+      title: "¡Producto guardado en el catálogo!",
+    });
+    setProductName("");
     setMaterialUsages([]);
     setDirectMaterialCost(0);
     setHours(0);
@@ -130,8 +160,12 @@ function PriceCalculator() {
         <div className="inline-flex items-center justify-center w-16 h-16 bg-gradient-to-br from-sage-400 to-mint-500 rounded-2xl shadow-lg mb-4">
           <CalcIcon className="w-8 h-8 text-white" />
         </div>
-        <h1 className="text-3xl font-bold text-gray-900">Calculadora de precios</h1>
-        <p className="text-gray-600 mt-1">Calcula el precio justo para tus creaciones</p>
+        <h1 className="text-3xl font-bold text-gray-900">
+          Calculadora de precios
+        </h1>
+        <p className="text-gray-600 mt-1">
+          Calcula el precio justo para tus creaciones
+        </p>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -161,8 +195,8 @@ function PriceCalculator() {
                   onClick={() => setUseMaterialFromInventory(true)}
                   className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-all ${
                     useMaterialFromInventory
-                      ? 'bg-sage-100 text-sage-800'
-                      : 'text-gray-500 hover:bg-gray-100'
+                      ? "bg-sage-100 text-sage-800"
+                      : "text-gray-500 hover:bg-gray-100"
                   }`}
                 >
                   Del inventario
@@ -171,8 +205,8 @@ function PriceCalculator() {
                   onClick={() => setUseMaterialFromInventory(false)}
                   className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-all ${
                     !useMaterialFromInventory
-                      ? 'bg-sage-100 text-sage-800'
-                      : 'text-gray-500 hover:bg-gray-100'
+                      ? "bg-sage-100 text-sage-800"
+                      : "text-gray-500 hover:bg-gray-100"
                   }`}
                 >
                   Costo directo
@@ -183,12 +217,20 @@ function PriceCalculator() {
             {useMaterialFromInventory ? (
               <div className="space-y-3">
                 {materialUsages.map((usage, index) => {
-                  const material = materials.find(m => m.id === usage.materialId);
+                  const material = materials.find(
+                    (m) => m.id === usage.materialId,
+                  );
                   return (
                     <div key={index} className="flex gap-2 items-center">
                       <select
                         value={usage.materialId}
-                        onChange={(e) => updateMaterialUsage(index, 'materialId', e.target.value)}
+                        onChange={(e) =>
+                          updateMaterialUsage(
+                            index,
+                            "materialId",
+                            e.target.value,
+                          )
+                        }
                         className="input-field flex-1"
                         disabled={loading}
                       >
@@ -201,13 +243,19 @@ function PriceCalculator() {
                       <input
                         type="number"
                         value={usage.quantity}
-                        onChange={(e) => updateMaterialUsage(index, 'quantity', parseFloat(e.target.value) || 0)}
+                        onChange={(e) =>
+                          updateMaterialUsage(
+                            index,
+                            "quantity",
+                            parseFloat(e.target.value) || 0,
+                          )
+                        }
                         className="input-field w-24"
                         placeholder="Cant."
                         min="0"
                       />
                       <span className="text-sm text-gray-500 w-16">
-                        {material?.unit || 'g'}
+                        {material?.unit || "g"}
                       </span>
                       <button
                         onClick={() => removeMaterialUsage(index)}
@@ -233,7 +281,9 @@ function PriceCalculator() {
                   <input
                     type="number"
                     value={directMaterialCost}
-                    onChange={(e) => setDirectMaterialCost(parseFloat(e.target.value) || 0)}
+                    onChange={(e) =>
+                      setDirectMaterialCost(parseFloat(e.target.value) || 0)
+                    }
                     className="input-field pl-10"
                     min="0"
                     step="0.01"
@@ -266,7 +316,11 @@ function PriceCalculator() {
                 <input
                   type="number"
                   value={minutes}
-                  onChange={(e) => setMinutes(parseInt(e.target.value) || 0)}
+                  onChange={(e) => {
+                    const val = parseInt(e.target.value) || 0;
+                    // Si el valor es mayor a 59, lo forzamos a ser 59 automáticamente
+                    setMinutes(val > 59 ? 59 : val);
+                  }}
                   className="input-field"
                   min="0"
                   max="59"
@@ -289,7 +343,9 @@ function PriceCalculator() {
                   <input
                     type="number"
                     value={hourlyRate}
-                    onChange={(e) => setHourlyRate(parseFloat(e.target.value) || 0)}
+                    onChange={(e) =>
+                      setHourlyRate(parseFloat(e.target.value) || 0)
+                    }
                     className="input-field pl-10"
                     min="0"
                     step="0.5"
@@ -300,12 +356,16 @@ function PriceCalculator() {
               <div>
                 <label className="label flex items-center justify-between">
                   <span>Margen de ganancia</span>
-                  <span className="text-sage-600 font-bold">{marginPercentage}%</span>
+                  <span className="text-sage-600 font-bold">
+                    {marginPercentage}%
+                  </span>
                 </label>
                 <input
                   type="range"
                   value={marginPercentage}
-                  onChange={(e) => setMarginPercentage(parseInt(e.target.value))}
+                  onChange={(e) =>
+                    setMarginPercentage(parseInt(e.target.value))
+                  }
                   className="w-full h-2 bg-sage-100 rounded-lg appearance-none cursor-pointer accent-sage-600"
                   min="0"
                   max="50"
@@ -323,7 +383,9 @@ function PriceCalculator() {
         {/* Right: Results Panel */}
         <div className="lg:sticky lg:top-8 space-y-5">
           <div className="card p-6 bg-gradient-to-br from-sage-50 to-white">
-            <h3 className="text-lg font-semibold text-gray-800 mb-6">Desglose del precio</h3>
+            <h3 className="text-lg font-semibold text-gray-800 mb-6">
+              Desglose del precio
+            </h3>
 
             <div className="space-y-4">
               {/* Material Cost */}
@@ -333,11 +395,13 @@ function PriceCalculator() {
                     <Package className="w-5 h-5 text-olive-600" />
                   </div>
                   <div>
-                    <div className="font-medium text-gray-700">Costo de materiales</div>
+                    <div className="font-medium text-gray-700">
+                      Costo de materiales
+                    </div>
                     <div className="text-xs text-gray-400">
                       {useMaterialFromInventory
                         ? `${materialUsages.length} materiales`
-                        : 'Costo directo'}
+                        : "Costo directo"}
                     </div>
                   </div>
                 </div>
@@ -353,7 +417,9 @@ function PriceCalculator() {
                     <Clock className="w-5 h-5 text-mint-600" />
                   </div>
                   <div>
-                    <div className="font-medium text-gray-700">Mano de obra</div>
+                    <div className="font-medium text-gray-700">
+                      Mano de obra
+                    </div>
                     <div className="text-xs text-gray-400">
                       {totalHours.toFixed(1)}h × ${hourlyRate}/h
                     </div>
@@ -371,7 +437,9 @@ function PriceCalculator() {
                     <TrendingUp className="w-5 h-5 text-amber-600" />
                   </div>
                   <div>
-                    <div className="font-medium text-gray-700">Ganancia neta</div>
+                    <div className="font-medium text-gray-700">
+                      Ganancia neta
+                    </div>
                     <div className="text-xs text-gray-400">
                       {marginPercentage}% de margen
                     </div>
@@ -385,7 +453,9 @@ function PriceCalculator() {
               {/* Total */}
               <div className="bg-gradient-to-r from-sage-600 to-mint-600 rounded-xl p-5 text-white">
                 <div className="flex items-center justify-between mb-2">
-                  <span className="text-white/90 text-sm font-medium">PRECIO DE VENTA SUGERIDO</span>
+                  <span className="text-white/90 text-sm font-medium">
+                    PRECIO DE VENTA SUGERIDO
+                  </span>
                   <Sparkles className="w-5 h-5 text-white/80" />
                 </div>
                 <div className="text-4xl font-bold">
@@ -402,17 +472,13 @@ function PriceCalculator() {
               <Save className="w-5 h-5" />
               <span>Guardar en catálogo</span>
             </button>
-
-            {showSavedMessage && (
-              <div className="mt-4 p-3 bg-green-50 border border-green-200 rounded-lg text-green-700 text-sm text-center animate-fade-in">
-                Producto guardado exitosamente en el inventario
-              </div>
-            )}
           </div>
 
           {/* Quick Tips */}
           <div className="card p-5 bg-gradient-to-br from-amber-50 to-white border-amber-200">
-            <h4 className="font-semibold text-amber-800 mb-3">Consejos para fijar precios</h4>
+            <h4 className="font-semibold text-amber-800 mb-3">
+              Consejos para fijar precios
+            </h4>
             <ul className="text-sm text-gray-600 space-y-2">
               <li className="flex items-start gap-2">
                 <span className="text-amber-500 mt-0.5">•</span>

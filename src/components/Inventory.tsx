@@ -12,10 +12,24 @@ import {
   Circle,
   Palette,
 } from 'lucide-react';
+import Swal from 'sweetalert2';
 import { storage } from '../lib/storage';
 import type { Product, Material } from '../lib/supabase';
 
 type Tab = 'products' | 'materials';
+
+const Toast = Swal.mixin({
+  toast: true,
+  position: 'top-end',
+  showConfirmButton: false,
+  timer: 2500,
+  timerProgressBar: true,
+  background: '#f9fafb',
+  iconColor: '#6b8273', // Verde Sage Pastel
+  customClass: {
+    popup: 'rounded-xl shadow-md font-sans border border-sage-100 text-gray-800'
+  }
+});
 
 function Inventory() {
   const [activeTab, setActiveTab] = useState<Tab>('products');
@@ -55,9 +69,31 @@ function Inventory() {
   };
 
   const deleteProduct = async (id: string) => {
-    if (!confirm('¿Eliminar este producto?')) return;
+    const result = await Swal.fire({
+      title: '¿Eliminar este producto?',
+      text: 'Esta acción no se puede deshacer y quitará el producto terminado de tu catálogo.',
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonColor: '#6b8273', // Verde Sage Pastel
+      cancelButtonColor: '#9ca3af',  // Gris neutro
+      confirmButtonText: 'Sí, eliminar',
+      cancelButtonText: 'Cancelar',
+      background: '#f9fafb',
+      customClass: { popup: 'rounded-2xl font-sans' }
+    });
+
+    if (!result.isConfirmed) return;
+
     await storage.deleteProduct(id);
     setProducts(products.filter(p => p.id !== id));
+
+    Swal.fire({
+      title: '¡Eliminado!',
+      text: 'El producto ha sido eliminado de tu inventario.',
+      icon: 'success',
+      confirmButtonColor: '#6b8273',
+      customClass: { popup: 'rounded-2xl' }
+    });
   };
 
   const updateMaterialQuantity = async (id: string, delta: number) => {
@@ -72,9 +108,31 @@ function Inventory() {
   };
 
   const deleteMaterial = async (id: string) => {
-    if (!confirm('¿Eliminar este material?')) return;
+    const result = await Swal.fire({
+      title: '¿Eliminar este material?',
+      text: 'Esta acción eliminará de forma permanente este insumo de tus materias primas.',
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonColor: '#6b8273',
+      cancelButtonColor: '#9ca3af',
+      confirmButtonText: 'Sí, eliminar',
+      cancelButtonText: 'Cancelar',
+      background: '#f9fafb',
+      customClass: { popup: 'rounded-2xl font-sans' }
+    });
+
+    if (!result.isConfirmed) return;
+
     await storage.deleteMaterial(id);
     setMaterials(materials.filter(m => m.id !== id));
+
+    Swal.fire({
+      title: '¡Eliminado!',
+      text: 'La materia prima ha sido eliminada correctamente.',
+      icon: 'success',
+      confirmButtonColor: '#6b8273',
+      customClass: { popup: 'rounded-2xl' }
+    });
   };
 
   const filteredProducts = products.filter(p =>
@@ -346,9 +404,11 @@ function Inventory() {
           onSave={async (productData) => {
             if (editingProduct) {
               await storage.updateProduct(editingProduct.id, productData);
+              Toast.fire({ icon: 'success', title: 'Producto actualizado con éxito' });
               loadData();
             } else {
               await storage.saveProduct(productData as Omit<Product, 'id' | 'created_at' | 'updated_at'>);
+              Toast.fire({ icon: 'success', title: 'Nuevo producto guardado' });
               loadData();
             }
             setShowProductModal(false);
@@ -364,9 +424,11 @@ function Inventory() {
           onSave={async (materialData) => {
             if (editingMaterial) {
               await storage.updateMaterial(editingMaterial.id, materialData);
+              Toast.fire({ icon: 'success', title: 'Material actualizado con éxito' });
               loadData();
             } else {
               await storage.saveMaterial(materialData as Omit<Material, 'id' | 'created_at' | 'updated_at'>);
+              Toast.fire({ icon: 'success', title: 'Nueva materia prima guardada' });
               loadData();
             }
             setShowMaterialModal(false);

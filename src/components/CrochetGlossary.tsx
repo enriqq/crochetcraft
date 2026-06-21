@@ -19,6 +19,7 @@ import {
 } from 'lucide-react';
 import { storage } from '../lib/storage';
 import type { CrochetStitch } from '../lib/supabase';
+import Swal from 'sweetalert2';
 
 type TerminologyLang = 'es' | 'en_us' | 'en_uk';
 
@@ -39,6 +40,19 @@ const LANG_LABELS = {
   en_us: { label: 'English (US)', flag: 'US' },
   en_uk: { label: 'English (UK)', flag: 'UK' },
 };
+
+const Toast = Swal.mixin({
+  toast: true,
+  position: 'top-end',
+  showConfirmButton: false,
+  timer: 2500,
+  timerProgressBar: true,
+  background: '#f9fafb',
+  iconColor: '#6b8273', // Verde Sage Pastel
+  customClass: {
+    popup: 'rounded-xl shadow-md font-sans border border-sage-100 text-gray-800'
+  }
+});
 
 function CrochetGlossary() {
   const [stitches, setStitches] = useState<CrochetStitch[]>([]);
@@ -120,9 +134,39 @@ function CrochetGlossary() {
   };
 
   const handleDelete = async (id: string) => {
-    if (!confirm('¿Eliminar este punto del diccionario?')) return;
+    // Alerta de confirmación estilizada con SweetAlert2
+    const result = await Swal.fire({
+      title: '¿Eliminar este punto?',
+      text: 'Esta acción no se puede deshacer y borrará permanentemente este punto personalizado del diccionario.',
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonColor: '#6b8273', // Verde Sage Pastel
+      cancelButtonColor: '#9ca3af',  // Gris neutro
+      confirmButtonText: 'Sí, eliminar',
+      cancelButtonText: 'Cancelar',
+      background: '#f9fafb',
+      customClass: {
+        popup: 'rounded-2xl font-sans',
+      }
+    });
+
+    // Si el usuario cancela, detenemos la operación
+    if (!result.isConfirmed) return;
+
+    // Si confirma, se ejecuta el borrado e inicialización estándar
     await storage.deleteCrochetStitch(id);
     loadStitches();
+
+    // Feedback visual de éxito
+    Swal.fire({
+      title: '¡Eliminado!',
+      text: 'El punto ha sido removido de tu diccionario.',
+      icon: 'success',
+      confirmButtonColor: '#6b8273',
+      customClass: {
+        popup: 'rounded-2xl',
+      }
+    });
   };
 
   if (loading) {
@@ -443,8 +487,10 @@ function CrochetGlossary() {
           onSave={async (stitchData) => {
             if (editingStitch) {
               await storage.updateCrochetStitch(editingStitch.id, stitchData);
+              Toast.fire({ icon: 'success', title: 'Punto actualizado con éxito' });
             } else {
               await storage.saveCrochetStitch(stitchData as Omit<CrochetStitch, 'id' | 'created_at' | 'updated_at' | 'is_custom'>);
+              Toast.fire({ icon: 'success', title: 'Nuevo punto agregado al diccionario' });
             }
             loadStitches();
             setShowAddModal(false);

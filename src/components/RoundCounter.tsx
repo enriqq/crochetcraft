@@ -18,6 +18,20 @@ import {
 } from 'lucide-react';
 import { storage } from '../lib/storage';
 import type { Counter, CustomStitchCounter } from '../lib/supabase';
+import Swal from 'sweetalert2';
+
+const Toast = Swal.mixin({
+  toast: true,
+  position: 'top-end',
+  showConfirmButton: false,
+  timer: 2500,
+  timerProgressBar: true,
+  background: '#f9fafb',
+  iconColor: '#6b8273', // Verde Sage Pastel
+  customClass: {
+    popup: 'rounded-xl shadow-md font-sans border border-sage-100 text-gray-800'
+  }
+});
 
 const COLORS = [
   { id: 'sage', name: 'Verde Sage', bg: 'bg-sage-100', border: 'border-sage-300', text: 'text-sage-700', accent: 'bg-sage-500', light: 'bg-sage-50' },
@@ -45,6 +59,39 @@ const STITCH_TYPES = [
   { key: 'dism_count', label: 'Disminuciones', abbr: 'dis', icon: TrendingDown, color: 'bg-red-50 border-red-200 text-red-700' },
   { key: 'cad_count', label: 'Cadenetas', abbr: 'cad', icon: Link, color: 'bg-amber-50 border-amber-200 text-amber-700' },
 ];
+
+// Funciones auxiliares para el historial de puntos por vuelta
+const getHistoryKey = (counterId: string) => `counter_stitch_history_${counterId}`;
+
+const saveRoundHistory = (counterId: string, roundNumber: number, counterData: any) => {
+  const key = getHistoryKey(counterId);
+  const existingHistory = localStorage.getItem(key);
+  const history = existingHistory ? JSON.parse(existingHistory) : {};
+  
+  history[roundNumber] = {
+    pb_count: counterData.pb_count || 0,
+    aum_count: counterData.aum_count || 0,
+    dism_count: counterData.dism_count || 0,
+    cad_count: counterData.cad_count || 0,
+    total_stitches: counterData.total_stitches || 0,
+    custom_counters: counterData.custom_counters || [],
+  };
+  
+  localStorage.setItem(key, JSON.stringify(history));
+};
+
+const getRoundHistory = (counterId: string, roundNumber: number) => {
+  const key = getHistoryKey(counterId);
+  const existingHistory = localStorage.getItem(key);
+  if (!existingHistory) return null;
+  
+  const history = JSON.parse(existingHistory);
+  return history[roundNumber] || null;
+};
+
+const clearCounterHistory = (counterId: string) => {
+  localStorage.removeItem(getHistoryKey(counterId));
+};
 
 function RoundCounter() {
   const [counters, setCounters] = useState<Counter[]>([]);
@@ -80,16 +127,33 @@ function RoundCounter() {
     ));
   };
 
-  // Row counter handlers
+  // Row counter handlers con Historial Local Temporal
   const handleRowIncrement = async (id: string, delta: number) => {
     const counter = counters.find(c => c.id === id);
     if (!counter) return;
 
-    const newRound = Math.max(0, counter.current_round + delta);
-    const updates: Partial<Counter> = { current_round: newRound };
+    // 1. GUARDAR el progreso de la vuelta en la que se encuentra actualmente el usuario
+    saveRoundHistory(id, counter.current_round, counter);
 
-    // Auto-reset all stitch counters when going to next row
-    if (delta > 0) {
+    const newRound = Math.max(0, counter.current_round + delta);
+    let updates: Partial<Counter> = { current_round: newRound };
+
+    // 2. INTENTAR RECUPERAR el progreso de la vuelta a la que se está moviendo el usuario
+    const cachedRoundData = getRoundHistory(id, newRound);
+
+    if (cachedRoundData) {
+      // Si el usuario ya estuvo en esta vuelta y tiene progreso guardado, lo restauramos
+      updates = {
+        ...updates,
+        pb_count: cachedRoundData.pb_count,
+        aum_count: cachedRoundData.aum_count,
+        dism_count: cachedRoundData.dism_count,
+        cad_count: cachedRoundData.cad_count,
+        total_stitches: cachedRoundData.total_stitches,
+        custom_counters: cachedRoundData.custom_counters,
+      };
+    } else {
+      // Si es una vuelta nueva sin historial y va hacia adelante, se inicializa en 0
       updates.pb_count = 0;
       updates.aum_count = 0;
       updates.dism_count = 0;
@@ -99,6 +163,7 @@ function RoundCounter() {
       updates.custom_counters = customCounters.map(c => ({ ...c, count: 0 }));
     }
 
+    // 3. Actualizar estado e interfaz
     updateLocalCounter(id, updates);
     await storage.updateCounter(id, updates);
   };
@@ -166,6 +231,23 @@ function RoundCounter() {
     const counter = counters.find(c => c.id === id);
     if (!counter) return;
 
+    const result = await Swal.fire({
+      title: '¿Reiniciar todos los contadores?',
+      text: 'Todos los contadores de puntos se van a reiniciar y no podrás deshacer esta acción.',
+      icon: 'question',
+      showCancelButton: true,
+      confirmButtonColor: '#6b8273',
+      cancelButtonColor: '#9ca3af',
+      confirmButtonText: 'Sí, reiniciar',
+      cancelButtonText: 'Mantener progreso',
+      background: '#f9fafb',
+      customClass: {
+        popup: 'rounded-2xl font-sans',
+      }
+    });
+
+    if (!result.isConfirmed) return;
+
     const customCounters = counter.custom_counters || [];
     const resetCustomCounters = customCounters.map(c => ({ ...c, count: 0 }));
 
@@ -187,6 +269,26 @@ function RoundCounter() {
     const counter = counters.find(c => c.id === id);
     if (!counter) return;
 
+    const result = await Swal.fire({
+      title: '¿Reiniciar todo el progreso?',
+      text: 'Volverás a la vuelta 0 y se limpiarán todos los contadores de puntos de este proyecto.',
+      icon: 'question',
+      showCancelButton: true,
+      confirmButtonColor: '#6b8273',
+      cancelButtonColor: '#9ca3af',
+      confirmButtonText: 'Sí, reiniciar',
+      cancelButtonText: 'Mantener progreso',
+      background: '#f9fafb',
+      customClass: {
+        popup: 'rounded-2xl font-sans',
+      }
+    });
+
+    if (!result.isConfirmed) return;
+
+    // Limpiamos el historial de todas las vueltas de este contador
+    clearCounterHistory(id);
+
     const customCounters = counter.custom_counters || [];
     const resetCustomCounters = customCounters.map(c => ({ ...c, count: 0 }));
 
@@ -205,9 +307,43 @@ function RoundCounter() {
   };
 
   const deleteCounter = async (id: string) => {
-    if (!confirm('¿Eliminar este contador?')) return;
+    // Alerta de confirmación estética
+    const result = await Swal.fire({
+      title: '¿Eliminar este contador?',
+      text: 'Esta acción no se puede deshacer y borrará permanentemente el progreso de todas las vueltas.',
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonColor: '#6b8273', // Verde pastel oscuro/Sage
+      cancelButtonColor: '#9ca3af',  // Gris neutro
+      confirmButtonText: 'Sí, eliminar',
+      cancelButtonText: 'Cancelar',
+      background: '#f9fafb',
+      customClass: {
+        popup: 'rounded-2xl font-sans',
+      }
+    });
+
+    // Si el usuario cancela, no hacemos nada
+    if (!result.isConfirmed) return;
+
+    // Si confirma, ejecutamos el borrado
     await storage.deleteCounter(id);
+    
+    // Limpiamos el historial de la memoria local
+    clearCounterHistory(id);
+    
     setCounters(counters.filter(c => c.id !== id));
+
+    // Alerta de éxito opcional (Feedback visual rápido)
+    Swal.fire({
+      title: '¡Eliminado!',
+      text: 'El contador ha sido borrado.',
+      icon: 'success',
+      confirmButtonColor: '#6b8273',
+      customClass: {
+        popup: 'rounded-2xl',
+      }
+    });
   };
 
   const getColorClasses = (colorId: string) => {
@@ -506,7 +642,7 @@ function RoundCounter() {
                       className="w-full py-2.5 px-4 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg text-sm font-medium transition-colors flex items-center justify-center gap-2"
                     >
                       <RotateCcw className="w-4 h-4" />
-                      Reiniciar Todo
+                      Reiniciar todo
                     </button>
                   </div>
                 </div>
@@ -550,6 +686,7 @@ function RoundCounter() {
           onSave={async (counterData) => {
             if (editingCounter) {
               await storage.updateCounter(editingCounter.id, counterData);
+              Toast.fire({ icon: 'success', title: 'Contador actualizado con éxito' });
             } else {
               await storage.saveCounter({
                 ...counterData,
@@ -560,6 +697,7 @@ function RoundCounter() {
                 total_stitches: 0,
                 custom_counters: [],
               } as Omit<Counter, 'id' | 'created_at' | 'updated_at'>);
+              Toast.fire({ icon: 'success', title: 'Nuevo contador creado' });
             }
             loadCounters();
             setShowModal(false);
@@ -581,6 +719,7 @@ function RoundCounter() {
               color: data.color,
             };
             await storage.addCustomCounter(activeCounterId, customCounter);
+            Toast.fire({ icon: 'success', title: 'Contador de punto personalizado añadido' });
             loadCounters();
             setShowCustomCounterModal(false);
             setActiveCounterId(null);
