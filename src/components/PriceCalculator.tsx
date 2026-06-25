@@ -61,7 +61,7 @@ function PriceCalculator() {
     if (materials.length > 0) {
       setMaterialUsages([
         ...materialUsages,
-        { materialId: materials[0].id, quantity: 50 },
+        { materialId: materials[0].id, quantity: 1 },
       ]);
     }
   };

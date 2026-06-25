@@ -30,7 +30,7 @@ export interface Material {
   color: string;
   type: 'acrílico' | 'algodón' | 'lana' | 'mixto';
   quantity: number;
-  unit: 'gramos' | 'madejas' | 'metros';
+  unit: 'gramos' | 'madejas' | 'metros' | 'piezas';
   cost: number;
   created_at: string;
   updated_at: string;

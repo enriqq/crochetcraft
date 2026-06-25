@@ -593,7 +593,7 @@ function MaterialModal({ material, onClose, onSave }: MaterialModalProps) {
       <div className="bg-white rounded-xl shadow-2xl w-full max-w-md animate-scale-in">
         <div className="flex items-center justify-between p-6 border-b border-sage-100">
           <h2 className="text-xl font-semibold text-gray-900">
-            {material ? 'Editar Material' : 'Nuevo Material'}
+            {material ? 'Editar material' : 'Nuevo material'}
           </h2>
           <button onClick={onClose} className="btn-icon">
             <X className="w-5 h-5" />
@@ -674,6 +674,7 @@ function MaterialModal({ material, onClose, onSave }: MaterialModalProps) {
                 <option value="gramos">Gramos</option>
                 <option value="madejas">Madejas</option>
                 <option value="metros">Metros</option>
+                <option value="piezas">Piezas</option>
               </select>
             </div>
 
